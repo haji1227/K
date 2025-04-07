@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>高校生のための計算トレ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Helvetica Neue', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow: hidden;
+      color: #2c3e50;
+    }
+
+    h1 {
+      font-size: 1.2em;
+      margin: 0.3em;
+    }
+
+#question {
+  font-size: 1.8em;
+  margin: 0.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 2em; /* ← これを追加 */
+}
+
+    #answerInput {
+      font-size: 1em;
+      font-weight: bold;
+      margin-left: 0.5em;
+      min-width: 4em;
+    }
+
+    #result {
+      font-size: 1.3em;
+      height: 1.5em;
+      margin: 0.2em;
+    }
+
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.4em;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .keypad-grid button {
+      padding: 0.9em;
+      font-size: 1.4em;
+      border: none;
+      border-radius: 8px;
+      color: white;
+    }
+
+    .keypad-grid button:not(.btn-ok):not(.btn-delete) {
+      background: #3498db;
+    }
+
+    .btn-delete {
+      background: #e74c3c !important;
+    }
+
+    .btn-delete:hover {
+      background: #c0392b !important;
+    }
+
+    .btn-ok {
+      background: #2ecc71 !important;
+    }
+
+    .btn-ok:hover {
+      background: #27ae60 !important;
+    }
+
+    .keypad-grid button:hover {
+      filter: brightness(0.95);
+    }
+
+    #restartBtn {
+      margin-top: 1em;
+      padding: 0.6em 1.2em;
+      font-size: 1.2em;
+      background: #2ecc71;
+      border: none;
+      border-radius: 6px;
+      color: white;
+    }
+
+    #memo-container {
+      margin: 1em 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #memo-canvas {
+      border: 1px solid #ccc;
+      background: white;
+      touch-action: none;
+      width: 300px;
+      height: 150px;
+    }
+
+    #clearBtn {
+      margin-top: 0.5em;
+      padding: 0.3em 1em;
+      font-size: 1em;
+      border: none;
+      border-radius: 6px;
+      background: #e67e22;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<h1>高校生のための計算トレ</h1>
+<div id="question">
+  <span id="problemText">読み込み中...</span>
+  <span id="answerInput"> </span>
+</div>
+<div id="result"></div>
+
+
+<!-- メモエリア -->
+<div id="memo-container">
+  <canvas id="memo-canvas" width="300" height="150"></canvas>
+  <button id="clearBtn">メモを消す</button>
+</div>
+<div class="keypad-grid" id="keypad"></div>
+<script>
+  const operators = ["+", "-", "×", "÷"];
+  let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
+
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateProblems() {
+    problems = [];
+    for (let i = 0; i < 10; i++) {
+      const op = operators[Math.floor(Math.random() * 4)];
+      let a, b, ans;
+      if (op === "+") {
+        a = rand(10, 99); b = rand(10, 99); ans = a + b;
+      } else if (op === "-") {
+        a = rand(10, 99); b = rand(10, 99); ans = a - b;
+      } else if (op === "×") {
+        a = rand(10, 99); b = rand(2, 9); ans = a * b;
+      } else {
+        b = rand(10, 99);
+        ans = rand(2, 9);
+        a = b * ans;
+      }
+      problems.push({ a, b, op, ans });
+    }
+    current = score = 0;
+    waitForUser = false;
+  }
+
+  function showProblem() {
+    if (current >= problems.length) return showResult();
+    const p = problems[current];
+    document.getElementById("problemText").textContent = `${p.a} ${p.op} ${p.b} =`;
+    userInput = "";
+    updateInput();
+    document.getElementById("result").textContent = "";
+  }
+
+  function updateInput() {
+    document.getElementById("answerInput").textContent = userInput || " ";
+  }
+
+  function setupKeypad() {
+    const keys = [
+      "7", "8", "9", "Delete",
+      "4", "5", "6", "",
+      "1", "2", "3", "ENTER",
+      "0", ".", "-", ""
+    ];
+    const keypad = document.getElementById("keypad");
+    keypad.innerHTML = "";
+    keys.forEach(k => {
+      const btn = document.createElement("button");
+      if (k === "") {
+        btn.style.visibility = "hidden";
+      } else {
+        btn.textContent = k;
+        if (k === "Delete") btn.classList.add("btn-delete");
+        else if (k === "ENTER") btn.classList.add("btn-ok");
+        btn.onclick = () => handleKey(k);
+      }
+      keypad.appendChild(btn);
+    });
+  }
+
+function handleKey(key) {
+  if (waitForUser) return;
+
+  if (key === "Delete") {
+    userInput = userInput.slice(0, -1);
+  } else if (key === "ENTER") {
+    if (userInput.trim() === "" || userInput === "-") return;  // ★無視する条件
+    checkAnswer();
+  } else if (key === "-") {
+    if (userInput === "") userInput = "-";
+  } else {
+    userInput += key;
+  }
+  updateInput();
+}
+
+  function checkAnswer() {
+    const p = problems[current];
+    const userNum = parseFloat(userInput);
+    const correct = Math.abs(userNum - p.ans) < 0.001;
+    const resultBox = document.getElementById("result");
+
+    if (correct) {
+      score++;
+      resultBox.textContent = "正解👍🏻";
+      setTimeout(() => advanceNext(), 800);
+    } else {
+      resultBox.textContent = `不正解‪🥲‎… 正解は ${p.ans}`;
+      setTimeout(() => {
+        waitForUser = true;
+      }, 500);
+    }
+  }
+
+  // ★ メモもクリアされるように修正
+  function advanceNext() {
+    waitForUser = false;
+    current++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);  // メモエリアをクリア
+    showProblem();
+  }
+
+  document.addEventListener("click", (e) => {
+    if (waitForUser) {
+      advanceNext();
+      e.stopPropagation();
+    }
+  });
+
+  function showResult() {
+  const msg = (score === 10) ? "満点！天才か！？"
+    : (score >= 8) ? "やるやん！あと少し！"
+    : (score >= 5) ? "いいペース！"
+    : (score >= 3) ? "まだ伸びしろあるね！"
+    : "次が本番や…！";
+
+  document.body.innerHTML = `
+    <style>
+      body {
+        background: #fffdf5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 1s ease-in-out;
+      }
+
+      h1 {
+        font-size: 2em;
+        animation: popIn 0.6s ease-out;
+        margin-bottom: 0.3em;
+      }
+
+      .score-msg, .emoji {
+        font-size: 1.6em;
+        margin: 0.4em 0;
+        animation: sway 2s ease-in-out infinite alternate;
+      }
+
+      .emoji {
+        font-size: 2.2em;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes popIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes sway {
+        0% { transform: rotate(-3deg); }
+        100% { transform: rotate(3deg); }
+      }
+
+      #restartBtn {
+        margin-top: 1.2em;
+        padding: 0.7em 1.4em;
+        font-size: 1.2em;
+        background: #f39c12;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        animation: popIn 1s ease-out;
+      }
+
+      #restartBtn:hover {
+        background: #e67e22;
+      }
+    </style>
+
+    <h1>お疲れさま！</h1>
+    <div class="emoji">✨🎉👏🏻</div>
+    <div class="score-msg">スコア：${score} / 10</div>
+    <div class="score-msg">${msg}</div>
+    <button id="restartBtn" onclick="location.reload()">もう1回やる！</button>
+  `;
+}
+
+  generateProblems();
+  setupKeypad();
+  showProblem();
+
+  // 手書きメモ描画処理
+  const canvas = document.getElementById("memo-canvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  function startDraw(e) {
+    drawing = true;
+    ctx.beginPath();
+    ctx.moveTo(getX(e), getY(e));
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    ctx.lineTo(getX(e), getY(e));
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+
+  function endDraw() {
+    drawing = false;
+  }
+
+  function getX(e) {
+    return e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+  }
+
+  function getY(e) {
+    return e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+  }
+
+  canvas.addEventListener("mousedown", startDraw);
+  canvas.addEventListener("mousemove", draw);
+  canvas.addEventListener("mouseup", endDraw);
+  canvas.addEventListener("mouseleave", endDraw);
+
+  canvas.addEventListener("touchstart", startDraw);
+  canvas.addEventListener("touchmove", draw);
+  canvas.addEventListener("touchend", endDraw);
+  canvas.addEventListener("touchcancel", endDraw);
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+</script>
+
+</body>
+</html>
