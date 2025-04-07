@@ -27,7 +27,16 @@
       font-size: 1.2em;
       margin: 0.3em;
     }
-
+#mode-select {
+  display: flex;
+  gap: 0.8em;
+  margin: 0.5em;
+  font-size: 1em;
+}
+#mode-select label {
+  display: flex;
+  align-items: center;
+}
 #question {
   font-size: 1.8em;
   margin: 0.4em;
@@ -129,6 +138,14 @@
 <body>
 
 <h1>高校生のための計算トレ</h1>
+  <div id="mode-select">
+  <label><input type="radio" name="mode" value="all" checked> 全部</label>
+  <label><input type="radio" name="mode" value="+"> ＋</label>
+  <label><input type="radio" name="mode" value="-"> −</label>
+  <label><input type="radio" name="mode" value="×"> ×</label>
+  <label><input type="radio" name="mode" value="÷"> ÷</label>
+</div>
+  
 <div id="question">
   <span id="problemText">読み込み中...</span>
   <span id="answerInput"> </span>
