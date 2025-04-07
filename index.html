@@ -161,12 +161,19 @@
 <script>
   const operators = ["+", "-", "×", "÷"];
   let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
-
+function getSelectedOperators() {
+  const selected = document.querySelector('input[name="mode"]:checked').value;
+  if (selected === "all") return ["+", "-", "×", "÷"];
+  return [selected];
+}
   function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   function generateProblems() {
+    const selectedOperators = getSelectedOperators();
+const op = selectedOperators[Math.floor(Math.random() * selectedOperators.length)];
+    
     problems = [];
     for (let i = 0; i < 10; i++) {
       const op = operators[Math.floor(Math.random() * 4)];
