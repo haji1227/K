@@ -160,7 +160,7 @@
   function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-function randList(numbers) {
+function randList(...numbers) {
   const index = Math.floor(Math.random() * numbers.length);
   return numbers[index];
 }
