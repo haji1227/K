@@ -174,7 +174,7 @@
       const op = selectedOperators[Math.floor(Math.random() * selectedOperators.length)];
       let a, b, ans;
       if (op === "+") {
-        a = rand(11, 999); b = rand(11, 999); ans = a + b;
+        a = rand(11, 999)/getRandomNumberFromList(1, 1, 1, 10, 100); b = rand(11, 999); ans = a + b;
       } else if (op === "-") {
         a = rand(11, 999); b = rand(11, 999); ans = a - b;
       } else if (op === "×") {
