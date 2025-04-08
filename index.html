@@ -244,13 +244,17 @@ function randList(...numbers) {
     showProblem();
   }
 
-  function showProblem() {
+function showProblem() {
   if (current >= problems.length) return showResult();
+
+  // 筆算モードを解除してデフォルト表示に戻す
+  document.body.classList.remove("pissan-mode");
+  document.getElementById("pissanBtn").textContent = "筆算on";
+
   const p = problems[current];
-  const isPissan = document.body.classList.contains("pissan-mode");
+  const isPissan = false; // ← OFF状態で表示するよう強制
 
   if (isPissan) {
-    // 筆算表示：桁合わせ（小数点以下含む）
     const a = parseFloat(p.a.toFixed(1));
     const b = parseFloat(p.b.toFixed(1));
     const aStr = a % 1 === 0 ? a.toFixed(0) : a.toFixed(1);
