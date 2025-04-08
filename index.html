@@ -119,7 +119,21 @@
   flex-direction: column;
   align-items: center;
 }
+#pissan-bar {
+  width: 90%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.3em;
+}
 
+#pissanBtn {
+  padding: 0.3em 1em;
+  font-size: 1em;
+  border: none;
+  border-radius: 6px;
+  background: #8e44ad;
+  color: white;
+}
 #memo-canvas {
   border: 1px solid #ccc;
   background: white;
@@ -154,8 +168,9 @@
   <span id="problemText">読み込み中...</span>
   <span id="answerInput"> </span>
 </div>
-<div id="result"></div><button id="pissanBtn">筆算モード</button>
+<div id="result"></div>
   <div id="memo-container">
+  <div id="pissan-bar"><button id="pissanBtn">筆算モード</button></div>
   <canvas id="memo-canvas" width="300" height="150"></canvas>
   <button id="clearBtn">メモを消す</button>
 </div>
