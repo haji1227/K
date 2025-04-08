@@ -200,6 +200,36 @@
   const isOn = document.body.classList.contains("pissan-mode");
   document.getElementById("pissanBtn").textContent = isOn ? "筆算off" : "筆算on";
 });
+
+    
+    function showProblem() {
+  if (current >= problems.length) return showResult();
+  const p = problems[current];
+  const isPissan = document.body.classList.contains("pissan-mode");
+
+  if (isPissan) {
+    // 筆算表示：桁合わせ（小数点以下含む）
+    const a = parseFloat(p.a.toFixed(1));
+    const b = parseFloat(p.b.toFixed(1));
+    const aStr = a % 1 === 0 ? a.toFixed(0) : a.toFixed(1);
+    const bStr = b % 1 === 0 ? b.toFixed(0) : b.toFixed(1);
+
+    const maxLen = Math.max(aStr.length, bStr.length + 1);
+    const aPad = aStr.padStart(maxLen, " ");
+    const bPad = (p.op + bStr).padStart(maxLen, " ");
+    const line = "―".repeat(maxLen);
+
+    document.getElementById("problemText").innerHTML =
+      `<pre style="text-align:right;">${aPad}\n${bPad}\n${line}</pre>`;
+  } else {
+    document.getElementById("problemText").textContent = `${p.a} ${p.op} ${p.b} =`;
+  }
+
+  userInput = "";
+  updateInput();
+  document.getElementById("result").textContent = "";
+}
+    
   const operators = ["+", "-", "×", "÷"];
   let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
 
