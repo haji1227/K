@@ -248,11 +248,11 @@ function showProblem() {
   if (current >= problems.length) return showResult();
 
   // 筆算モードを解除してデフォルト表示に戻す
-  document.body.classList.remove("pissan-mode");
-  document.getElementById("pissanBtn").textContent = "筆算on";
+/*  document.body.classList.remove("pissan-mode");
+  document.getElementById("pissanBtn").textContent = "筆算on";*/
 
   const p = problems[current];
-  const isPissan = false; // ← OFF状態で表示するよう強制
+  const isPissan = document.body.classList.contains("pissan-mode");
 
   if (isPissan) {
     const a = parseFloat(p.a.toFixed(1));
