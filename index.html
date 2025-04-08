@@ -159,24 +159,25 @@
 <div class="keypad-grid" id="keypad"></div>
   <script>
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').then(registration => {
-        // サービスワーカーの更新が見つかった場合
-        registration.onupdatefound = () => {
-          const newWorker = registration.installing;
-          newWorker.onstatechange = () => {
-            if (newWorker.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
-                // すでに旧SWが動いているなら、新SWに切り替えてリロード
-                console.log('新しいバージョンを検出。ページを更新します。');
+  if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(registration => {
+      registration.onupdatefound = () => {
+        const newWorker = registration.installing;
+        newWorker.onstatechange = () => {
+          if (newWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              // ユーザーに通知を出す
+              if (confirm('新しいバージョンがあります。更新しますか？')) {
                 location.reload();
               }
             }
-          };
+          }
         };
-      });
+      };
     });
-  }
+  });
+}
     
   const operators = ["+", "-", "×", "÷"];
   let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
