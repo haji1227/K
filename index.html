@@ -199,6 +199,7 @@
   document.body.classList.toggle("pissan-mode");
   const isOn = document.body.classList.contains("pissan-mode");
   document.getElementById("pissanBtn").textContent = isOn ? "筆算off" : "筆算on";
+  showProblem(); // ← これを追加！
 });
 
     
