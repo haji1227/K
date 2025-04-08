@@ -160,7 +160,10 @@
   function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-
+function randList(numbers) {
+  const index = Math.floor(Math.random() * numbers.length);
+  return numbers[index];
+}
   function getSelectedOperators() {
     const selected = document.querySelector('input[name="mode"]:checked').value;
     if (selected === "all") return ["+", "-", "×", "÷"];
@@ -174,7 +177,7 @@
       const op = selectedOperators[Math.floor(Math.random() * selectedOperators.length)];
       let a, b, ans;
       if (op === "+") {
-        a = rand(11, 999)/*/getRandomNumberFromList(1, 1, 1, 10, 100)*/; b = rand(11, 999); ans = a + b;
+        a = rand(11, 999)/randList(1, 1, 1, 10, 100); b = rand(11, 999); ans = a + b;
       } else if (op === "-") {
         a = rand(11, 999); b = rand(11, 999); ans = a - b;
       } else if (op === "×") {
