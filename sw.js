@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-app-v2'; // ここを変更することでキャッシュ更新
+const CACHE_NAME = 'my-app-v11'; // ここを変更することでキャッシュ更新
 const urlsToCache = [
   '/',
   '/index.html',
