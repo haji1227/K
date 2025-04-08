@@ -127,8 +127,8 @@
 }
 
 #pissanBtn {
-  padding: 0.3em 1em;
-  font-size: 1em;
+  padding: 0.3em 0.7em;
+  font-size: 0.8em;
   border: none;
   border-radius: 6px;
 /*  background: #8e44ad;*/
@@ -170,14 +170,13 @@
 </div>
 <div id="result"></div>
   <div id="memo-container">
-  <div id="pissan-bar"><button id="pissanBtn">筆算モード</button></div>
+  <div id="pissan-bar"><button id="pissanBtn">筆算on</button></div>
   <canvas id="memo-canvas" width="300" height="150"></canvas>
   <button id="clearBtn">メモを消す</button>
 </div>
 <div class="keypad-grid" id="keypad"></div>
   <script>
   if ('serviceWorker' in navigator) {
-//  if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(registration => {
       registration.onupdatefound = () => {
@@ -199,7 +198,7 @@
     document.getElementById("pissanBtn").addEventListener("click", () => {
   document.body.classList.toggle("pissan-mode");
   const isOn = document.body.classList.contains("pissan-mode");
-  document.getElementById("pissanBtn").textContent = isOn ? "筆算モードOFF" : "筆算モード";
+  document.getElementById("pissanBtn").textContent = isOn ? "筆算off" : "筆算on";
 });
   const operators = ["+", "-", "×", "÷"];
   let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
