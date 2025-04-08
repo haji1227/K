@@ -137,6 +137,11 @@
   background: #e67e22;
   color: white;
 }
+    .pissan-mode #memo-canvas {
+  background-image: linear-gradient(to bottom, #ddd 1px, transparent 1px);
+  background-size: 100% 20px;
+  height: 200px;
+}
 
   </style>
 </head>
@@ -154,7 +159,7 @@
 </div>
 <div id="result"></div><div id="memo-container">
   <canvas id="memo-canvas" width="300" height="150"></canvas>
-  <button id="clearBtn">メモを消す</button>
+  <button id="clearBtn">メモを消す</button><button id="pissanBtn">筆算モード</button>
 </div>
 <div class="keypad-grid" id="keypad"></div>
   <script>
@@ -178,7 +183,11 @@
     });
   });
 }
-    
+    document.getElementById("pissanBtn").addEventListener("click", () => {
+  document.body.classList.toggle("pissan-mode");
+  const isOn = document.body.classList.contains("pissan-mode");
+  document.getElementById("pissanBtn").textContent = isOn ? "筆算モードOFF" : "筆算モード";
+});
   const operators = ["+", "-", "×", "÷"];
   let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
 
