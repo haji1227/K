@@ -43,24 +43,36 @@
 
 #question {
   font-size: 1.8em;
-  margin: 0.4em;
+  margin: 0.3em;
   display: flex;
   align-items: center;
   justify-content: center;
   padding-left: 2em;
+  margin-bottom: 0em;
 }
+#problemText{
+
+}
+
 
 #answerInput {
   font-size: 1em;
   font-weight: bold;
   margin-left: 0.5em;
   min-width: 4em;
+/*  padding: 0.4em 0em;     /* ← 上下0.4em, 左右0.6em に増やす */
+/*  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: inset 0 0 2px #eee;
+  display: inline-block;
+  line-height: 1.2;*/
 }
 
 #result {
-  font-size: 1.3em;
-  height: 1.5em;
-  margin: 0.2em;
+  font-size: 1.0em;
+  height: 1.1em;
+  margin: 0.1em;
 }
 
 .keypad-grid {
@@ -69,6 +81,7 @@
   gap: 0.4em;
   width: 100%;
   max-width: 320px;
+  margin-top: 0.8em;  /* ← これを追加！ */
 }
 
 .keypad-grid button {
@@ -114,21 +127,33 @@
 }
 
 #memo-container {
-  margin: 1em 0;
+  margin: 0.2em 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  
+  border-top: 1px solid #ccc;  /* ← 区切り線を追加 */
+  padding-top: 0.5em;          /* 線と下の余白 */
+  margin-top: 0.8em;           /* 線とキーパッドの間隔 */
 }
-#pissan-bar {
-  width: 90%;
+#memo-buttons {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.3em;
+  gap: 1em;
+  margin-top: 0.5em;
 }
-
-#pissanBtn {
-  padding: 0.3em 0.7em;
-  font-size: 0.8em;
+#clearBtn {
+  margin-top: 0.5em;
+  padding: 0.3em 1em;
+  font-size: 1em;
+  border: none;
+  border-radius: 6px;
+  background: #e67e22;
+  color: white;
+  }
+#hissanBtn {
+  margin-top: 0.5em;
+  padding: 0.3em 1em;
+  font-size: 1em;
   border: none;
   border-radius: 6px;
   background: #2ecc71;
@@ -143,15 +168,6 @@
   max-height: 200px;
 }
 
-#clearBtn {
-  margin-top: 0.5em;
-  padding: 0.3em 1em;
-  font-size: 1em;
-  border: none;
-  border-radius: 6px;
-  background: #e67e22;
-  color: white;
-}
 
 
   </style>
@@ -164,118 +180,162 @@
   <label><input type="radio" name="mode" value="×"> ×</label>
   <label><input type="radio" name="mode" value="÷"> ÷</label>
 </div>
+<div id="result"> </div>
 <div id="question">
   <span id="problemText">読み込み中...</span>
   <span id="answerInput"> </span>
 </div>
-<div id="result"></div>
   <div id="memo-container">
-  <div id="pissan-bar"><button id="pissanBtn">筆算on</button></div>
   <canvas id="memo-canvas" width="300" height="150"></canvas>
-  <button id="clearBtn">メモを消す</button>
+  <div id="memo-buttons">
+    <button id="clearBtn">メモを消す</button> 
+    <button id="hissanBtn">筆算on</button>
+  </div>
 </div>
 <div class="keypad-grid" id="keypad"></div>
-  <script>
+
+<script>
   if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(registration => {
-      registration.onupdatefound = () => {
-        const newWorker = registration.installing;
-        newWorker.onstatechange = () => {
-          if (newWorker.state === 'installed') {
-            if (navigator.serviceWorker.controller) {
-              // ユーザーに通知を出す
-              if (confirm('新しいバージョンがあります。更新しますか？')) {
-                location.reload();
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(registration => {
+        registration.onupdatefound = () => {
+          const newWorker = registration.installing;
+          newWorker.onstatechange = () => {
+            if (newWorker.state === 'installed') {
+              if (navigator.serviceWorker.controller) {
+                if (confirm('新しいバージョンがあります。更新しますか？')) {
+                  location.reload();
+                }
               }
             }
-          }
+          };
         };
-      };
+      });
     });
-  });
-}
-    document.getElementById("pissanBtn").addEventListener("click", () => {
-  document.body.classList.toggle("pissan-mode");
-  const isOn = document.body.classList.contains("pissan-mode");
-  document.getElementById("pissanBtn").textContent = isOn ? "筆算off" : "筆算on";
-  showProblem(); // ← これを追加！
-});
+  }
 
-    
-    
-    
-  const operators = ["+", "-", "×", "÷"];
-  let problems = [], current = 0, score = 0, userInput = "", waitForUser = false;
+  document.getElementById("hissanBtn").addEventListener("click", () => {
+    document.body.classList.toggle("hissan-mode");
+    const isOn = document.body.classList.contains("hissan-mode");
+    document.getElementById("hissanBtn").textContent = isOn ? "筆算off" : "筆算on";
+    showProblem();
+  });
+
+  function hissanOff() {
+    if (document.body.classList.contains("hissan-mode")) {
+      document.body.classList.remove("hissan-mode");
+    }
+    document.getElementById("hissanBtn").textContent = "筆算on";
+  }
 
   function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-function randList(...numbers) {
-  const index = Math.floor(Math.random() * numbers.length);
-  return numbers[index];
-}
+
+  function randList(...numbers) {
+    const index = Math.floor(Math.random() * numbers.length);
+    return numbers[index];
+  }
+
+  function getDigitLength(n) {
+    const intPart = Math.floor(Math.abs(n));
+    return intPart.toString().length;
+  }
+
+  function getDecimalLength(n) {
+    const fixed = n.toFixed(2);
+    const parts = fixed.split(".");
+    return parts[1] ? parts[1].replace(/0+$/, "").length : 0;
+  }
+
   function getSelectedOperators() {
     const selected = document.querySelector('input[name="mode"]:checked').value;
-    if (selected === "all") return ["+", "-", "×", "÷"];
-    return [selected];
+    return selected === "all" ? ["+", "-", "×", "÷"] : [selected];
   }
 
   function generateProblems() {
     problems = [];
     const selectedOperators = getSelectedOperators();
+
     for (let i = 0; i < 10; i++) {
       const op = selectedOperators[Math.floor(Math.random() * selectedOperators.length)];
       let a, b, ans;
+
       if (op === "+") {
-        a = rand(11, 999) / randList(1, 1, 1, 10, 100); b = rand(11, 999)/randList(1, 1, 1, 10, 100); ans = a + b;
+        do {
+          a = parseFloat((rand(11, 999) / randList(1, 1, 10, 100)).toFixed(2));
+          b = parseFloat((rand(11, 999) / randList(1, 1, 10, 100)).toFixed(2));
+        } while (
+          Math.abs(getDecimalLength(a) - getDecimalLength(b)) >= 2 ||
+          Math.abs(getDigitLength(a) - getDigitLength(b)) >= 2
+        );
+        ans = parseFloat((a + b).toFixed(2));
       } else if (op === "-") {
-        a = rand(11, 999); b = rand(11, 999); ans = a - b;
+        do {
+          a = parseFloat((rand(11, 999) / randList(1, 1, 10, 100)).toFixed(2));
+          b = parseFloat((rand(11, 999) / randList(1, 1, 10, 100)).toFixed(2));
+        } while (
+          Math.abs(getDecimalLength(a) - getDecimalLength(b)) >= 2 ||
+          Math.abs(getDigitLength(a) - getDigitLength(b)) >= 2
+        );
+        ans = parseFloat((a - b).toFixed(2));
       } else if (op === "×") {
-        a = rand(10, 99); b = rand(2, 9); ans = a * b;
+        a = rand(10, 99);
+        b = rand(2, 9);
+        ans = a * b;
       } else {
         b = rand(10, 99);
         ans = rand(2, 9);
         a = b * ans;
       }
+
       problems.push({ a, b, op, ans });
     }
+
     current = score = 0;
     waitForUser = false;
     showProblem();
   }
 
-function showProblem() {
-  if (current >= problems.length) return showResult();
+  function showProblem() {
+    if (current >= problems.length) return showResult();
 
-  // 筆算モードを解除してデフォルト表示に戻す
-/*  document.body.classList.remove("pissan-mode");
-  document.getElementById("pissanBtn").textContent = "筆算on";*/
+    const p = problems[current];
+    const ishissan = document.body.classList.contains("hissan-mode");
 
-  const p = problems[current];
-  const isPissan = document.body.classList.contains("pissan-mode");
+    if (ishissan) {
+      const format = n => n.toFixed(2).replace(/\.?0+$/, '');
+      const aStr = format(p.a);
+      const bStr = format(p.b);
+      const [ai, apRaw = ""] = aStr.split(".");
+      const [bi, bpRaw = ""] = bStr.split(".");
+      const ap = apRaw ? '.' + apRaw : '  ';
+      const bp = bpRaw ? '.' + bpRaw : '  ';
+      const leftMax = Math.max(ai.length, bi.length);
+      const rightMax = Math.max(ap.length, bp.length);
+      const aiPad = ai.padStart(leftMax, " ");
+      const biPad = bi.padStart(leftMax, " ");
+      const apPad = ap.padEnd(rightMax, " ");
+      const bpPad = bp.padEnd(rightMax, " ");
 
-  if (isPissan) {
-    const a = parseFloat(p.a.toFixed(1));
-    const b = parseFloat(p.b.toFixed(1));
-    const aStr = a % 1 === 0 ? a.toFixed(0) : a.toFixed(1);
-    const bStr = b % 1 === 0 ? b.toFixed(0) : b.toFixed(1);
+      let aLine = aiPad + apPad;
+      let bLine = p.op + biPad + bpPad;
+      // 引き算で答えが負なら aとbを入れ替える
+      if ((p.op === "-") && (p.a - p.b < 0)) {
+        [aLine, bLine] = [bLine, aLine];
+      }
+      document.getElementById("problemText").innerHTML = `
+        <pre style="text-align:right; font-family: Menlo, Consolas, monospace; line-height:1.1; margin:0;">
+${aLine}
+${bLine}</pre>`;
+    } else {
+      document.getElementById("problemText").textContent = `${p.a} ${p.op} ${p.b} =`;
+    }
 
-    const maxLen = Math.max(aStr.length, bStr.length + 1);
-    const aPad = aStr.padStart(maxLen, " ");
-    const bPad = (p.op + bStr).padStart(maxLen, " ");
-    const line = "―".repeat(maxLen);
-
-    document.getElementById("problemText").innerHTML =
-      `<pre style="text-align:right;">${aPad}\n${bPad}\n${line}</pre>`;
-  } else {
-    document.getElementById("problemText").textContent = `${p.a} ${p.op} ${p.b} =`;
+    userInput = "";
+    updateInput();
+    document.getElementById("result").textContent = "";
   }
-
-  userInput = "";
-  updateInput();
-  document.getElementById("result").textContent = "";
-}
 
   function updateInput() {
     document.getElementById("answerInput").textContent = userInput || " ";
@@ -286,10 +346,12 @@ function showProblem() {
       "7", "8", "9", "Delete",
       "4", "5", "6", "",
       "1", "2", "3", "ENTER",
-      "0", ".", "-", ""
+      "-", "0", ".", ""
     ];
+
     const keypad = document.getElementById("keypad");
     keypad.innerHTML = "";
+
     keys.forEach(k => {
       const btn = document.createElement("button");
       if (k === "") {
@@ -306,6 +368,7 @@ function showProblem() {
 
   function handleKey(key) {
     if (waitForUser) return;
+
     if (key === "Delete") {
       userInput = userInput.slice(0, -1);
     } else if (key === "ENTER") {
@@ -316,6 +379,7 @@ function showProblem() {
     } else {
       userInput += key;
     }
+
     updateInput();
   }
 
@@ -327,10 +391,10 @@ function showProblem() {
 
     if (correct) {
       score++;
-      resultBox.textContent = "正解👍🏻";
+      resultBox.textContent = "正解👍";
       setTimeout(() => advanceNext(), 800);
     } else {
-      resultBox.textContent = `不正解‪🥲‎… 正解は ${p.ans}`;
+      resultBox.textContent = `不正解😢… 正解は ${p.ans}`;
       setTimeout(() => {
         waitForUser = true;
       }, 500);
@@ -341,6 +405,7 @@ function showProblem() {
     waitForUser = false;
     current++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+//    hissanOff();
     showProblem();
   }
 
@@ -353,10 +418,16 @@ function showProblem() {
 
   function showResult() {
     const msg = (score === 10) ? "満点！天才か！？"
-      : (score >= 8) ? "やるやん！あと少し！"
-      : (score >= 5) ? "いいペース！"
-      : (score >= 3) ? "まだ伸びしろあるね！"
-      : "次が本番や…！";
+              : (score >= 8) ? "やるやん！あと少し！"
+              : (score >= 5) ? "いいペース！"
+              : (score >= 3) ? "まだ伸びしろあるね！"
+              : "次が本番や…！";
+
+    const emoji = (score === 10) ? "💯✨👏"
+                : (score >= 8) ? "👍🌟"
+                : (score >= 5) ? "😊✌️"
+                : (score >= 3) ? "🙌📈"
+                : "😅🔥";
 
     document.body.innerHTML = `
       <style>
@@ -393,31 +464,71 @@ function showProblem() {
           animation: popIn 1s ease-out;
         }
         #restartBtn:hover { background: #e67e22; }
-      </style><h1>お疲れさま！</h1>
-  <div class="emoji">✨🎉👏🏻</div>
-  <div class="score-msg">スコア：${score} / 10</div>
-  <div class="score-msg">${msg}</div>
-  <button id="restartBtn" onclick="location.reload()">もう1回やる！</button>
-`;
+      </style>
+      <h1>お疲れさま！</h1>
+      <div class="emoji">${emoji}</div>
+      <div class="score-msg">スコア：${score} / 10</div>
+      <div class="score-msg">${msg}</div>
+      <button id="restartBtn" onclick="location.reload()">もう1回やる！</button>
+    `;
+  }
 
-}
+  generateProblems();
+  setupKeypad();
 
-generateProblems(); setupKeypad();
+  const canvas = document.getElementById("memo-canvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
 
-const canvas = document.getElementById("memo-canvas"); const ctx = canvas.getContext("2d"); let drawing = false;
+  function startDraw(e) {
+    drawing = true;
+    ctx.beginPath();
+    ctx.moveTo(getX(e), getY(e));
+  }
 
-function startDraw(e) { drawing = true; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); }
+  function draw(e) {
+    if (!drawing) return;
+    ctx.lineTo(getX(e), getY(e));
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
 
-function draw(e) { if (!drawing) return; ctx.lineTo(getX(e), getY(e)); ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.stroke(); }
+  function endDraw() {
+    drawing = false;
+  }
 
-function endDraw() { drawing = false; } function getX(e) { return e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX; } function getY(e) { return e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY; }
+  function getX(e) {
+    return e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+  }
 
-canvas.addEventListener("mousedown", startDraw); canvas.addEventListener("mousemove", draw); canvas.addEventListener("mouseup", endDraw); canvas.addEventListener("mouseleave", endDraw); canvas.addEventListener("touchstart", startDraw); canvas.addEventListener("touchmove", draw); canvas.addEventListener("touchend", endDraw); canvas.addEventListener("touchcancel", endDraw);
+  function getY(e) {
+    return e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+  }
 
-document.getElementById("clearBtn").addEventListener("click", () => { ctx.clearRect(0, 0, canvas.width, canvas.height); });
+  canvas.addEventListener("mousedown", startDraw);
+  canvas.addEventListener("mousemove", draw);
+  canvas.addEventListener("mouseup", endDraw);
+  canvas.addEventListener("mouseleave", endDraw);
 
-document.querySelectorAll('input[name="mode"]').forEach(input => { input.addEventListener("change", () => { generateProblems(); }); });
-  </script>
+  canvas.addEventListener("touchstart", startDraw);
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    draw(e);
+  }, { passive: false });
+  canvas.addEventListener("touchend", endDraw);
+  canvas.addEventListener("touchcancel", endDraw);
 
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+
+  document.querySelectorAll('input[name="mode"]').forEach(input => {
+    input.addEventListener("change", () => {
+      generateProblems();
+    });
+  });
+</script>
 </body>
 </html>
