@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-  <title>高校生のための計算トレ</title>
+  <title>Math Practice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2c3e50">
@@ -144,12 +144,12 @@
 }
 #memo-buttons {
   display: flex;
-  gap: 1em;
+  gap: 0.6em;
   margin-top: 0.5em;
 }
 #clearBtn {
   margin-top: 0.5em;
-  padding: 0.3em 1em;
+  padding: 0.3em 0.7em;
   font-size: 1em;
   border: none;
   border-radius: 6px;
@@ -158,7 +158,7 @@
   }
 #hissanBtn {
   margin-top: 0.5em;
-  padding: 0.3em 1em;
+  padding: 0.3em 0.7em;
   font-size: 1em;
   border: none;
   border-radius: 6px;
@@ -182,18 +182,26 @@ body.hissan-mode #swapBtn {
 }
 #memo-canvas {
   border: 1px solid #ccc;
-  background: white;
+  background: #f5f5f5; /* ライトモードではグレー */
   touch-action: none;
   width: 90vw;
-  height: 25vh; /* ← ここを使うことで画面の縦の20%を使う */
+  height: 25vh;
   max-height: 200px;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  #memo-canvas {
+    background: #2c2c2c; /* ダークモードではダークグレー */
+    border-color: #444;
+  }
 }
 
 
 
   </style>
 </head>
-<body><h1>高校生のための計算トレ</h1>
+<body><h1>Math Practice✏️🔥</h1>
 <div id="mode-select">
   <label><input type="radio" name="mode" value="all" checked> all</label>
   <label><input type="radio" name="mode" value="+"> ＋</label>
@@ -209,15 +217,30 @@ body.hissan-mode #swapBtn {
 </div>
   <div id="memo-container">
   <canvas id="memo-canvas" width="300" height="150"></canvas>
-  <div id="memo-buttons">
-    <button id="clearBtn">メモclear</button> 
-    <button id="hissanBtn">筆算on</button>
-    <button id="swapBtn" class="small-btn">入替</button>
-  </div>
+<div id="memo-buttons">
+  <button id="clearBtn">clear memo</button> 
+  <button id="eraserBtn" class="small-btn">eraser</button>
+  <button id="hissanBtn">column on</button>
+  <button id="swapBtn" class="small-btn">switch</button>
+</div>
 </div>
 <div class="keypad-grid" id="keypad"></div>
 
 <script>
+  // 変数の初期化
+  let problems = [];
+  let current = 0;
+  let score = 0;
+  let waitForUser = false;
+  let userInput = "";
+  let swapHissanOrder = false;
+  
+  // Canvas関連の変数
+  const canvas = document.getElementById("memo-canvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+  let penMode = true; // true: pen, false: eraser
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').then(registration => {
@@ -240,7 +263,7 @@ body.hissan-mode #swapBtn {
   document.getElementById("hissanBtn").addEventListener("click", () => {
     document.body.classList.toggle("hissan-mode");
     const isOn = document.body.classList.contains("hissan-mode");
-    document.getElementById("hissanBtn").textContent = isOn ? "筆算off" : "筆算on";
+    document.getElementById("hissanBtn").textContent = isOn ? "column off" : "column on";
     showProblem();
   });
 
@@ -248,7 +271,7 @@ body.hissan-mode #swapBtn {
     if (document.body.classList.contains("hissan-mode")) {
       document.body.classList.remove("hissan-mode");
     }
-    document.getElementById("hissanBtn").textContent = "筆算on";
+    document.getElementById("hissanBtn").textContent = "column on";
   }
 
   function rand(min, max) {
@@ -346,6 +369,13 @@ body.hissan-mode #swapBtn {
 
     current = score = 0;
     waitForUser = false;
+    
+    // ここでメモエリアをクリア
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // キャンバス背景をモードに合わせて設定
+    ctx.fillStyle = getMemoBackgroundColor();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     showProblem();
   }
   function showProblem() {
@@ -354,7 +384,7 @@ body.hissan-mode #swapBtn {
   const p = problems[current];
   const ishissan = document.body.classList.contains("hissan-mode");
 
-  document.getElementById("questionNumber").textContent = `第${current + 1}問`;
+  document.getElementById("questionNumber").textContent = `Q${current + 1}`;
   
   // 割り算の場合、切り捨て指示を生成
   let divisionInstruction = "";
@@ -427,7 +457,6 @@ ${bLine}</pre>
   document.getElementById("result").textContent = "";
 }
 
-  let swapHissanOrder = false;
   document.getElementById("swapBtn").addEventListener("click", () => {
     swapHissanOrder = !swapHissanOrder;
     showProblem(); // すぐに反映
@@ -484,7 +513,7 @@ function handleKey(key) {
       userInput = "0.";
     } else if (userInput === "-") {
       userInput = "-0.";
-    } else {
+    } else if (!userInput.includes(".")) {
       userInput += key;
     }
   } else {
@@ -502,10 +531,10 @@ function handleKey(key) {
 
     if (correct) {
       score++;
-      resultBox.textContent = "正解👍";
+      resultBox.textContent = "Correct! 👍";
       setTimeout(() => advanceNext(), 800);
     } else {
-      resultBox.textContent = `不正解😢… 正解は ${p.ans}`;
+      resultBox.textContent = `Incorrect😢: ${p.ans}`;
       setTimeout(() => {
         waitForUser = true;
       }, 500);
@@ -516,6 +545,9 @@ function handleKey(key) {
     waitForUser = false;
     current++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // キャンバス背景をモードに合わせて設定
+    ctx.fillStyle = getMemoBackgroundColor();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     swapHissanOrder = false;
     showProblem();
   }
@@ -528,11 +560,11 @@ function handleKey(key) {
   });
 
   function showResult() {
-    const msg = (score === 10) ? "満点！天才か！？"
-              : (score >= 8) ? "やるやん！あと少し！"
-              : (score >= 5) ? "いいペース！"
-              : (score >= 3) ? "まだ伸びしろあるね！"
-              : "次が本番や…！";
+const msg = (score === 10) ? "Perfect score! Genius level!"
+            : (score >= 8) ? "Nice work! Just a bit more!"
+            : (score >= 5) ? "You're doing well!"
+            : (score >= 3) ? "You're getting there! Keep going!"
+            : "Now the real challenge begins...";
 
     const emoji = (score === 10) ? "💯✨👏"
                 : (score >= 8) ? "👍🌟"
@@ -576,53 +608,112 @@ function handleKey(key) {
         }
         #restartBtn:hover { background: #e67e22; }
       </style>
-      <h1>お疲れさま！</h1>
+      <h1>Good job！</h1>
       <div class="emoji">${emoji}</div>
-      <div class="score-msg">スコア：${score} / 10</div>
+      <div class="score-msg">Score：${score} / 10</div>
       <div class="score-msg">${msg}</div>
-      <button id="restartBtn" onclick="location.reload()">もう1回やる！</button>
+      <button id="restartBtn" onclick="location.reload()">Try again！</button>
+      
     `;
   }
 
-  generateProblems();
-  setupKeypad();
+  // ダークモード検出
+  function isDarkMode() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
 
-  const canvas = document.getElementById("memo-canvas");
-  const ctx = canvas.getContext("2d");
-  let drawing = false;
+  // メモエリアの背景色をモードに応じて設定
+  function getMemoBackgroundColor() {
+    return isDarkMode() ? "#2c2c2c" : "#f5f5f5";
+  }
 
+  // キャンバスの初期化
+  function initCanvas() {
+    // キャンバス背景をモードに合わせて設定
+    ctx.fillStyle = getMemoBackgroundColor();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 描画関連の処理を整理
+  // 描画開始
   function startDraw(e) {
     drawing = true;
+    const x = getX(e);
+    const y = getY(e);
     ctx.beginPath();
-    ctx.moveTo(getX(e), getY(e));
+    setDrawingStyle();
+    ctx.moveTo(x, y);
   }
 
+  // 描画中
   function draw(e) {
     if (!drawing) return;
-    ctx.lineTo(getX(e), getY(e));
-    ctx.strokeStyle = "gray";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
+    const x = getX(e);
+    const y = getY(e);
+    setDrawingStyle();
+    ctx.lineTo(x, y);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
   }
 
+  // 描画スタイルを設定
+  function setDrawingStyle() {
+    ctx.lineWidth = penMode ? 2 : 15;
+    ctx.strokeStyle = penMode ? (isDarkMode() ? "#ccc" : "gray") : getMemoBackgroundColor();
+    ctx.lineCap = "round";
+  }
+
+  // 描画終了
   function endDraw() {
     drawing = false;
+    ctx.closePath();
   }
+
+  // X座標を取得
   function getX(e) {
-  const rect = canvas.getBoundingClientRect();
-  // canvas要素の表示サイズと内部サイズの比率を考慮
-  const scaleX = canvas.width / rect.width;
-  return ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
+    const rect = canvas.getBoundingClientRect();
+    // canvas要素の表示サイズと内部サイズの比率を考慮
+    const scaleX = canvas.width / rect.width;
+    return ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
   }
 
+  // Y座標を取得
   function getY(e) {
-  const rect = canvas.getBoundingClientRect();
-  // canvas要素の表示サイズと内部サイズの比率を考慮
-  const scaleY = canvas.height / rect.height;
-  return ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+    const rect = canvas.getBoundingClientRect();
+    // canvas要素の表示サイズと内部サイズの比率を考慮
+    const scaleY = canvas.height / rect.height;
+    return ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+  }
+  
+  // clearBtnクリック時
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // キャンバス背景をモードに合わせて設定
+    ctx.fillStyle = getMemoBackgroundColor();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
+
+  // 消しゴムボタン用のイベントリスナーを追加
+  document.getElementById("eraserBtn").addEventListener("click", function() {
+    penMode = !penMode;
+    this.textContent = penMode ? "eraser" : "pen";
+    this.style.background = penMode ? "#95a5a6" : "#3498db";
+  });
+
+  // ダークモード切り替え検出
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    updateMemoBackground();
+  });
+
+  // メモ背景を更新する関数
+  function updateMemoBackground() {
+    const memoBackgroundColor = getMemoBackgroundColor();
+    ctx.fillStyle = memoBackgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
+  // イベントリスナーの設定
   canvas.addEventListener("mousedown", startDraw);
   canvas.addEventListener("mousemove", draw);
   canvas.addEventListener("mouseup", endDraw);
@@ -636,16 +727,17 @@ function handleKey(key) {
   canvas.addEventListener("touchend", endDraw);
   canvas.addEventListener("touchcancel", endDraw);
 
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  });
-
   document.querySelectorAll('input[name="mode"]').forEach(input => {
     input.addEventListener("change", () => {
       swapHissanOrder = false;
       generateProblems();
     });
   });
+
+  // 初期化処理を実行
+  initCanvas();
+  generateProblems();
+  setupKeypad();
 </script>
 </body>
 </html>
