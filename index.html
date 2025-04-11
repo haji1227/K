@@ -42,13 +42,19 @@
 }
 
 #question {
-  font-size: 1.8em;
+  font-size: 1.6em;
   margin: 0.3em;
   display: flex;
   align-items: center;
   justify-content: center;
   padding-left: 2em;
   margin-bottom: 0em;
+}
+.question-number {
+  font-size: 0.6em;
+  color: #888;
+  margin-right: 0.6em;
+  white-space: nowrap;  /* ← 改行させない！ */
 }
 #problemText{
 
@@ -159,12 +165,27 @@
   background: #2ecc71;
   color: white;
 }
+#swapBtn {
+  display: none;  /* デフォルトは非表示 */
+}
+body.hissan-mode #swapBtn {
+  display: inline-block;  /* 筆算モードのときだけ表示 */
+}
+.small-btn {
+  margin-top: 0.5em;
+  padding: 0.3em 0.6em;
+  font-size: 0.8em;
+  border: none;
+  border-radius: 6px;
+  background: #95a5a6;
+  color: white;
+}
 #memo-canvas {
   border: 1px solid #ccc;
   background: white;
   touch-action: none;
   width: 90vw;
-  height: 20vh; /* ← ここを使うことで画面の縦の20%を使う */
+  height: 25vh; /* ← ここを使うことで画面の縦の20%を使う */
   max-height: 200px;
 }
 
@@ -182,14 +203,16 @@
 </div>
 <div id="result"> </div>
 <div id="question">
+  <span id="questionNumber" class="question-number"></span>
   <span id="problemText">読み込み中...</span>
   <span id="answerInput"> </span>
 </div>
   <div id="memo-container">
   <canvas id="memo-canvas" width="300" height="150"></canvas>
   <div id="memo-buttons">
-    <button id="clearBtn">メモを消す</button> 
+    <button id="clearBtn">メモclear</button> 
     <button id="hissanBtn">筆算on</button>
+    <button id="swapBtn" class="small-btn">入替</button>
   </div>
 </div>
 <div class="keypad-grid" id="keypad"></div>
@@ -280,13 +303,42 @@
         );
         ans = parseFloat((a - b).toFixed(2));
       } else if (op === "×") {
-        a = rand(10, 99);
-        b = rand(2, 9);
-        ans = a * b;
-      } else {
-        b = rand(10, 99);
-        ans = rand(2, 9);
-        a = b * ans;
+        if (Math.random() < 0.5) {
+        // 一方が3桁、もう一方が1桁（順不同）
+        const big = parseFloat((rand(101, 999) / randList(1, 1, 10, 100)).toFixed(2));
+        const small = parseFloat((rand(2, 9) / randList(1, 1, 10, 100)).toFixed(2));
+        if (Math.random() < 0.5) {
+          a = big; b = small;  // 3桁 × 1桁
+        } else {
+          a = small; b = big;  // 1桁 × 3桁
+        }
+        } else {
+        // 2桁 × 2桁
+         a = parseFloat((rand(11, 99) / randList(1, 1, 10, 100)).toFixed(2));
+         b = parseFloat((rand(11, 99) / randList(1, 1, 10, 100)).toFixed(2));
+        }
+        ans = parseFloat((a * b).toFixed(4));
+      } else if (op === "÷") {
+        a = rand(10, 999);
+        b = rand(11, 99);
+  
+  // 答えを計算（小数点以下2桁まで保持）
+  const rawAns = a / b;
+  
+  // 整数部分の桁数を取得
+  const intDigits = Math.floor(Math.abs(rawAns)) === 0 ? 0 : 
+                   Math.floor(Math.log10(Math.floor(Math.abs(rawAns)))) + 1;
+  
+  if (intDigits >= 2) {
+    // 整数部分が2桁以上なら整数のみ
+    ans = Math.floor(rawAns);
+  } else if (intDigits === 1) {
+    // 整数部分が1桁なら小数第1位まで
+    ans = Math.floor(rawAns * 10) / 10;
+  } else {
+    // 整数部分が0なら小数第2位まで
+    ans = Math.floor(rawAns * 100) / 100;
+        }
       }
 
       problems.push({ a, b, op, ans });
@@ -296,14 +348,41 @@
     waitForUser = false;
     showProblem();
   }
-
   function showProblem() {
-    if (current >= problems.length) return showResult();
+  if (current >= problems.length) return showResult();
 
-    const p = problems[current];
-    const ishissan = document.body.classList.contains("hissan-mode");
+  const p = problems[current];
+  const ishissan = document.body.classList.contains("hissan-mode");
 
-    if (ishissan) {
+  document.getElementById("questionNumber").textContent = `第${current + 1}問`;
+  
+  // 割り算の場合、切り捨て指示を生成
+  let divisionInstruction = "";
+  if (p.op === "÷") {
+    // 整数部分の桁数を取得
+    const rawAns = p.a / p.b;
+    const intDigits = Math.floor(Math.abs(rawAns)) === 0 ? 0 : 
+                     Math.floor(Math.log10(Math.floor(Math.abs(rawAns)))) + 1;
+    
+    if (intDigits >= 2) {
+      divisionInstruction = "（小数部分は切り捨て）";
+    } else if (intDigits === 1) {
+      divisionInstruction = "（小数第2位以下は切り捨て）";
+    } else {
+      divisionInstruction = "（小数第3位以下は切り捨て）";
+    }
+  }
+
+  if (ishissan) {
+    // 割り算の場合は特別な表示
+    if (p.op === "÷") {
+      document.getElementById("problemText").innerHTML = `
+        <div style="text-align:right; font-family: Menlo, Consolas, monospace; line-height:1.1; margin:0;">
+          ${p.a} / ${p.b}
+        </div>
+        <div style="font-size:0.4em; color:#666; margin-top:0.5em;">${divisionInstruction}</div>`;
+    } else {
+      // 他の演算の場合は従来通り
       const format = n => n.toFixed(2).replace(/\.?0+$/, '');
       const aStr = format(p.a);
       const bStr = format(p.b);
@@ -324,18 +403,35 @@
       if ((p.op === "-") && (p.a - p.b < 0)) {
         [aLine, bLine] = [bLine, aLine];
       }
+      if (swapHissanOrder) {
+        [aLine, bLine] = [bLine, aLine];
+      }
+      
       document.getElementById("problemText").innerHTML = `
         <pre style="text-align:right; font-family: Menlo, Consolas, monospace; line-height:1.1; margin:0;">
 ${aLine}
-${bLine}</pre>`;
+${bLine}</pre>
+        <div style="font-size:0.8em; color:#666; margin-top:0.5em;">${divisionInstruction}</div>`;
+    }
+  } else {
+    // 通常モードでの表示
+    if (divisionInstruction) {
+      document.getElementById("problemText").innerHTML = `${p.a} ${p.op} ${p.b} = <div style="font-size:0.4em; color:#666; margin-top:0.2em;">${divisionInstruction}</div>`;
     } else {
       document.getElementById("problemText").textContent = `${p.a} ${p.op} ${p.b} =`;
     }
-
-    userInput = "";
-    updateInput();
-    document.getElementById("result").textContent = "";
   }
+
+  userInput = "";
+  updateInput();
+  document.getElementById("result").textContent = "";
+}
+
+  let swapHissanOrder = false;
+  document.getElementById("swapBtn").addEventListener("click", () => {
+    swapHissanOrder = !swapHissanOrder;
+    showProblem(); // すぐに反映
+  });
 
   function updateInput() {
     document.getElementById("answerInput").textContent = userInput || " ";
@@ -365,23 +461,38 @@ ${bLine}</pre>`;
       keypad.appendChild(btn);
     });
   }
+function handleKey(key) {
+  if (waitForUser) return;
 
-  function handleKey(key) {
-    if (waitForUser) return;
-
-    if (key === "Delete") {
+  if (key === "Delete") {
+    // 「0.」のときは一度に両方削除する
+    if (userInput === "0.") {
+      userInput = "";
+    } else if (userInput === "-0.") {
+      // 「-0.」の場合は「-」だけ残す
+      userInput = "-";
+    } else {
       userInput = userInput.slice(0, -1);
-    } else if (key === "ENTER") {
-      if (userInput.trim() === "" || userInput === "-") return;
-      checkAnswer();
-    } else if (key === "-") {
-      if (userInput === "") userInput = "-";
+    }
+  } else if (key === "ENTER") {
+    if (userInput.trim() === "" || userInput === "-") return;
+    checkAnswer();
+  } else if (key === "-") {
+    if (userInput === "") userInput = "-";
+  } else if (key === ".") {
+    if (userInput === "") {
+      userInput = "0.";
+    } else if (userInput === "-") {
+      userInput = "-0.";
     } else {
       userInput += key;
     }
-
-    updateInput();
+  } else {
+    userInput += key;
   }
+
+  updateInput();
+}
 
   function checkAnswer() {
     const p = problems[current];
@@ -405,7 +516,7 @@ ${bLine}</pre>`;
     waitForUser = false;
     current++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-//    hissanOff();
+    swapHissanOrder = false;
     showProblem();
   }
 
@@ -489,7 +600,7 @@ ${bLine}</pre>`;
   function draw(e) {
     if (!drawing) return;
     ctx.lineTo(getX(e), getY(e));
-    ctx.strokeStyle = "#333";
+    ctx.strokeStyle = "gray";
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.stroke();
@@ -498,13 +609,18 @@ ${bLine}</pre>`;
   function endDraw() {
     drawing = false;
   }
-
   function getX(e) {
-    return e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+  const rect = canvas.getBoundingClientRect();
+  // canvas要素の表示サイズと内部サイズの比率を考慮
+  const scaleX = canvas.width / rect.width;
+  return ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
   }
 
   function getY(e) {
-    return e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+  const rect = canvas.getBoundingClientRect();
+  // canvas要素の表示サイズと内部サイズの比率を考慮
+  const scaleY = canvas.height / rect.height;
+  return ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
   }
 
   canvas.addEventListener("mousedown", startDraw);
@@ -526,6 +642,7 @@ ${bLine}</pre>`;
 
   document.querySelectorAll('input[name="mode"]').forEach(input => {
     input.addEventListener("change", () => {
+      swapHissanOrder = false;
       generateProblems();
     });
   });
